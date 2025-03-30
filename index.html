@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Video.js 影片擷取（顯示影片時間）</title>
+
+    <!-- Video.js -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/video.js/8.0.4/video-js.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/video.js/8.0.4/video.min.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .video-container {
+            margin-top: 10px;
+        }
+
+        .btn {
+            display: inline-block;
+            margin: 10px;
+            padding: 12px 20px;
+            font-size: 16px;
+            color: white;
+            background: #007bff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .btn:hover {
+            background: #0056b3;
+        }
+
+        canvas {
+            display: none;
+        }
+
+        .snapshot-container {
+            margin-top: 20px;
+        }
+
+        .snapshot {
+            width: 100%;
+            max-width: 100%;
+            border-radius: 10px;
+            border: 2px solid #ddd;
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        .time {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+            margin-top: 20px;
+            display: inline-block;
+            margin-left: 15px;
+        }
+
+        /* 響應式設計 */
+        @media (max-width: 768px) {
+            .container {
+                width: 95%;
+                padding: 10px;
+            }
+
+            .btn {
+                font-size: 14px;
+                padding: 10px 15px;
+            }
+
+            .snapshot {
+                max-width: 100%;
+            }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>🎥 影片擷取（顯示影片時間）</h2>
+
+        <!-- 檔案選擇按鈕 和 顯示時間 -->
+        <button class="btn" onclick="document.getElementById('file-input').click()">📂 選擇影片</button>
+        <input type="file" id="file-input" accept="video/*" onchange="loadVideo(event)">
+        <div class="time" id="video-time">0:00</div>
+
+        <!-- 影片播放器 -->
+        <div class="video-container">
+            <video id="my-video" class="video-js vjs-default-skin vjs-big-play-centered" controls>
+                <source id="video-source" src="" type="video/mp4">
+            </video>
+        </div>
+
+        <!-- 擷取畫面按鈕 -->
+        <button class="btn" onclick="captureFrame()">📸 擷取畫面</button>
+
+        <!-- 隱藏 Canvas -->
+        <canvas id="canvas"></canvas>
+
+        <!-- 顯示擷取的圖片 -->
+        <div class="snapshot-container">
+            <img id="snapshot" class="snapshot" src="" alt="擷取的圖片">
+        </div>
+    </div>
+
+    <script>
+        let player = videojs("my-video");
+
+        function loadVideo(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const videoURL = URL.createObjectURL(file);
+                player.src({ type: file.type, src: videoURL });
+                player.load();
+                player.play();
+
+                // 自動調整播放器大小
+                adjustVideoSize();
+            }
+        }
+
+        function captureFrame() {
+            const video = document.querySelector("video");
+            const canvas = document.getElementById("canvas");
+            const context = canvas.getContext("2d");
+            const snapshot = document.getElementById("snapshot");
+
+            // 設定 Canvas 大小與影片一致
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            // 擷取當前畫面到 Canvas
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // 將 Canvas 轉換為圖片
+            snapshot.src = canvas.toDataURL("image/png");
+        }
+
+        function adjustVideoSize() {
+            const videoElement = document.querySelector("#my-video");
+            const container = document.querySelector(".video-container");
+
+            if (window.innerWidth <= 768) {
+                videoElement.style.width = "100%";
+                videoElement.style.height = "80vh";
+                videoElement.style.objectFit = "contain";
+            } else {
+                videoElement.style.width = "640px";
+                videoElement.style.height = "360px";
+            }
+        }
+
+        // 更新影片時間顯示
+        function updateVideoTime() {
+            const timeDisplay = document.getElementById('video-time');
+            const currentTime = player.currentTime(); // 使用 Video.js API 獲取播放時間
+
+            // 檢查影片是否播放並且有有效的 currentTime
+            if (!isNaN(currentTime) && currentTime > 0) {
+                const minutes = Math.floor(currentTime / 60);
+                const seconds = Math.floor(currentTime % 60);
+                timeDisplay.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+            }
+        }
+
+        // 每秒更新影片時間
+        setInterval(updateVideoTime, 1000);
+
+        // 影片播放時更新時間
+        player.on('play', function() {
+            updateVideoTime();
+        });
+
+        // 頁面載入時自動調整影片大小
+        window.addEventListener("resize", adjustVideoSize);
+        window.addEventListener("load", adjustVideoSize);
+    </script>
+
+</body>
+</html>
